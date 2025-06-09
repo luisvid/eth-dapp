@@ -15,22 +15,27 @@ import {
   listenForNetworkChanges
 } from './utils/ethereum';
 
+// The main App component for the DApp
+// This component handles the user interface and interactions with the blockchain.
 function App() {
   // State variables
-  const [account, setAccount] = useState(null);
-  const [isOwner, setIsOwner] = useState(false);
-  const [isCorrectNetwork, setIsCorrectNetwork] = useState(false);
-  const [message, setMessage] = useState('');
-  const [storedMessage, setStoredMessage] = useState('');
-  const [depositAmount, setDepositAmount] = useState('');
-  const [contractBalance, setContractBalance] = useState('0');
-  const [status, setStatus] = useState({ type: '', message: '' });
-  const [loading, setLoading] = useState(false);
+  // These variables store the current state of the application, such as the connected account, network status, and contract data.
+  const [account, setAccount] = useState(null); // Stores the connected wallet address
+  const [isOwner, setIsOwner] = useState(false); // Indicates if the connected account is the contract owner
+  const [isCorrectNetwork, setIsCorrectNetwork] = useState(false); // Checks if the user is on the Sepolia network
+  const [message, setMessage] = useState(''); // Stores the input message to be sent to the contract
+  const [storedMessage, setStoredMessage] = useState(''); // Stores the message retrieved from the contract
+  const [depositAmount, setDepositAmount] = useState(''); // Stores the ETH amount to deposit
+  const [contractBalance, setContractBalance] = useState('0'); // Stores the contract's ETH balance
+  const [status, setStatus] = useState({ type: '', message: '' }); // Displays status messages to the user
+  const [loading, setLoading] = useState(false); // Indicates if an operation is in progress
 
-  // Initialize the DApp
+  // useEffect hook
+  // This hook runs when the component is mounted and initializes the DApp.
   useEffect(() => {
     const init = async () => {
       if (!isMetaMaskInstalled()) {
+        // If MetaMask is not installed, show an error message.
         setStatus({
           type: 'error',
           message: 'MetaMask is not installed. Please install MetaMask to use this DApp.'
@@ -39,21 +44,21 @@ function App() {
       }
 
       try {
-        // Check if already connected
+        // Check if the wallet is already connected
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
         if (accounts.length > 0) {
           setAccount(accounts[0]);
           
-          // Check if on Sepolia network
+          // Check if the user is on the Sepolia network
           const onSepolia = await checkNetwork();
           setIsCorrectNetwork(onSepolia);
           
           if (onSepolia) {
-            // Get contract owner and check if current account is owner
+            // Get the contract owner and check if the connected account is the owner
             const owner = await getContractOwner();
             setIsOwner(accounts[0].toLowerCase() === owner.toLowerCase());
             
-            // Get contract balance
+            // Get the contract's balance
             await updateContractBalance();
           }
         }
@@ -68,11 +73,11 @@ function App() {
 
     init();
 
-    // Set up event listeners
+    // Set up event listeners for account and network changes
     listenForAccountChanges(handleAccountChange);
     listenForNetworkChanges(handleNetworkChange);
 
-    // Cleanup event listeners on component unmount
+    // Cleanup event listeners when the component is unmounted
     return () => {
       if (window.ethereum) {
         window.ethereum.removeListener('accountsChanged', handleAccountChange);
@@ -82,17 +87,14 @@ function App() {
   }, []);
 
   // Handle account change
+  // This function updates the state when the connected wallet account changes.
   const handleAccountChange = async (newAccount) => {
     setAccount(newAccount);
     
     if (newAccount && isCorrectNetwork) {
-      // Check if new account is owner
       const owner = await getContractOwner();
       setIsOwner(newAccount.toLowerCase() === owner.toLowerCase());
-      
-      // Update contract balance
       await updateContractBalance();
-      
       setStatus({ type: '', message: '' });
     } else {
       setIsOwner(false);
@@ -100,17 +102,14 @@ function App() {
   };
 
   // Handle network change
+  // This function updates the state when the connected network changes.
   const handleNetworkChange = async (isSepolia) => {
     setIsCorrectNetwork(isSepolia);
     
     if (isSepolia && account) {
-      // Check if account is owner
       const owner = await getContractOwner();
       setIsOwner(account.toLowerCase() === owner.toLowerCase());
-      
-      // Update contract balance
       await updateContractBalance();
-      
       setStatus({ type: '', message: '' });
     } else {
       setIsOwner(false);
@@ -118,6 +117,7 @@ function App() {
   };
 
   // Connect wallet
+  // This function connects the user's wallet to the DApp.
   const handleConnectWallet = async () => {
     setLoading(true);
     setStatus({ type: 'loading', message: 'Connecting to wallet...' });
@@ -125,19 +125,13 @@ function App() {
     try {
       const connectedAccount = await connectWallet();
       setAccount(connectedAccount);
-      
-      // Check if on Sepolia network
       const onSepolia = await checkNetwork();
       setIsCorrectNetwork(onSepolia);
       
       if (onSepolia) {
-        // Check if account is owner
         const owner = await getContractOwner();
         setIsOwner(connectedAccount.toLowerCase() === owner.toLowerCase());
-        
-        // Update contract balance
         await updateContractBalance();
-        
         setStatus({ type: 'success', message: 'Wallet connected successfully!' });
       } else {
         setStatus({
@@ -157,6 +151,7 @@ function App() {
   };
 
   // Switch to Sepolia network
+  // This function switches the user's wallet to the Sepolia testnet.
   const handleSwitchNetwork = async () => {
     setLoading(true);
     setStatus({ type: 'loading', message: 'Switching to Sepolia network...' });
@@ -165,15 +160,11 @@ function App() {
       await switchToSepolia();
       setIsCorrectNetwork(true);
       
-      // Check if account is owner
       if (account) {
         const owner = await getContractOwner();
         setIsOwner(account.toLowerCase() === owner.toLowerCase());
-        
-        // Update contract balance
         await updateContractBalance();
       }
-      
       setStatus({ type: 'success', message: 'Switched to Sepolia network successfully!' });
     } catch (error) {
       console.error('Network switch error:', error);
@@ -187,6 +178,7 @@ function App() {
   };
 
   // Update contract balance
+  // This function retrieves the current balance of the smart contract.
   const updateContractBalance = async () => {
     try {
       const balance = await getBalance();
@@ -197,6 +189,7 @@ function App() {
   };
 
   // Store message
+  // This function sends a message to the smart contract.
   const handleStoreMessage = async () => {
     if (!message.trim()) {
       setStatus({
@@ -212,7 +205,7 @@ function App() {
     try {
       await storeMessage(message);
       setStatus({ type: 'success', message: 'Message stored successfully!' });
-      setMessage(''); // Clear input field
+      setMessage('');
     } catch (error) {
       console.error('Store message error:', error);
       setStatus({
@@ -225,6 +218,7 @@ function App() {
   };
 
   // Get message
+  // This function retrieves the stored message from the smart contract.
   const handleGetMessage = async () => {
     setLoading(true);
     setStatus({ type: 'loading', message: 'Retrieving message...' });
@@ -245,6 +239,7 @@ function App() {
   };
 
   // Deposit ETH
+  // This function sends ETH to the smart contract.
   const handleDeposit = async () => {
     if (!depositAmount || parseFloat(depositAmount) <= 0) {
       setStatus({
@@ -261,7 +256,7 @@ function App() {
       await deposit(depositAmount);
       await updateContractBalance();
       setStatus({ type: 'success', message: 'ETH deposited successfully!' });
-      setDepositAmount(''); // Clear input field
+      setDepositAmount('');
     } catch (error) {
       console.error('Deposit error:', error);
       setStatus({
@@ -274,6 +269,7 @@ function App() {
   };
 
   // Withdraw ETH
+  // This function withdraws all ETH from the smart contract (owner only).
   const handleWithdraw = async () => {
     setLoading(true);
     setStatus({ type: 'loading', message: 'Withdrawing ETH...' });
@@ -294,11 +290,13 @@ function App() {
   };
 
   // Format account address for display
+  // This function shortens the wallet address for better readability.
   const formatAddress = (address) => {
     if (!address) return '';
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
+  // Render the DApp's user interface
   return (
     <div className="dapp-container">
       <header className="dapp-header">
@@ -306,7 +304,7 @@ function App() {
         <p className="dapp-subtitle">Interact with the SimpleStorage contract on Sepolia testnet</p>
       </header>
 
-      {/* Wallet Connection */}
+      {/* Wallet Connection Section */}
       <div className="wallet-info">
         {account ? (
           <div className="wallet-address">
@@ -327,7 +325,7 @@ function App() {
         )}
       </div>
 
-      {/* Network Warning */}
+      {/* Network Warning Section */}
       {account && !isCorrectNetwork && (
         <div className="network-warning">
           <div>Please switch to the Sepolia network to use this DApp.</div>
@@ -341,7 +339,7 @@ function App() {
         </div>
       )}
 
-      {/* Main DApp Content - Only show if connected and on correct network */}
+      {/* Main DApp Content Section */}
       {account && isCorrectNetwork && (
         <>
           {/* Message Storage Section */}
@@ -424,7 +422,7 @@ function App() {
         </>
       )}
 
-      {/* Status Messages */}
+      {/* Status Messages Section */}
       {status.message && (
         <div className={`status-container status-${status.type}`}>
           {status.message}
