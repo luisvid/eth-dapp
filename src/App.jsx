@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import './DApp.css';
 import {
   isMetaMaskInstalled,
@@ -79,12 +79,12 @@ function App() {
         window.ethereum.removeListener('chainChanged', handleNetworkChange);
       }
     };
-  }, [handleAccountChange, handleNetworkChange]);
+  }, []);
 
   // Handle account change
-  const handleAccountChange = useCallback(async (newAccount) => {
+  const handleAccountChange = async (newAccount) => {
     setAccount(newAccount);
-
+    
     if (newAccount && isCorrectNetwork) {
       // Check if new account is owner
       const owner = await getContractOwner();
@@ -97,12 +97,12 @@ function App() {
     } else {
       setIsOwner(false);
     }
-  }, [isCorrectNetwork]);
+  };
 
   // Handle network change
-  const handleNetworkChange = useCallback(async (isSepolia) => {
+  const handleNetworkChange = async (isSepolia) => {
     setIsCorrectNetwork(isSepolia);
-
+    
     if (isSepolia && account) {
       // Check if account is owner
       const owner = await getContractOwner();
@@ -115,7 +115,7 @@ function App() {
     } else {
       setIsOwner(false);
     }
-  }, [account]);
+  };
 
   // Connect wallet
   const handleConnectWallet = async () => {
